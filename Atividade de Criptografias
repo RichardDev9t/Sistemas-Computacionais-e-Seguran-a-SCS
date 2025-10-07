@@ -1,0 +1,163 @@
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.*;
+import java.util.Base64;
+
+public class CriptoDemo {
+
+    // =================================================================
+    // 1. CRIPTOGRAFIA SIMÉTRICA (AES)
+    // =================================================================
+
+    /**
+     * Gera uma chave secreta AES de 128 bits.
+     */
+    public static SecretKey gerarChaveAES() throws NoSuchAlgorithmException {
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(128); // 128 bits para AES
+        return keyGen.generateKey();
+    }
+
+    /**
+     * Cifra um texto usando a chave AES.
+     */
+    public static byte[] cifrarAES(String textoPuro, SecretKey chave) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, chave);
+        return cipher.doFinal(textoPuro.getBytes("UTF-8"));
+    }
+
+    /**
+     * Decifra um texto cifrado usando a mesma chave AES.
+     */
+    public static String decifrarAES(byte[] textoCifrado, SecretKey chave) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, chave);
+        byte[] textoDecifrado = cipher.doFinal(textoCifrado);
+        return new String(textoDecifrado, "UTF-8");
+    }
+
+    // =================================================================
+    // 2. CRIPTOGRAFIA ASSIMÉTRICA (RSA)
+    // =================================================================
+
+    /**
+     * Gera um par de chaves RSA (Pública e Privada) de 2048 bits.
+     */
+    public static KeyPair gerarParDeChavesRSA() throws NoSuchAlgorithmException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(2048); // 2048 bits para RSA
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    /**
+     * Cifra um texto usando a Chave Pública (para envio).
+     */
+    public static byte[] cifrarRSA(String textoPuro, PublicKey chavePublica) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, chavePublica);
+        return cipher.doFinal(textoPuro.getBytes("UTF-8"));
+    }
+
+    /**
+     * Decifra um texto cifrado usando a Chave Privada (para recebimento).
+     */
+    public static String decifrarRSA(byte[] textoCifrado, PrivateKey chavePrivada) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, chavePrivada);
+        byte[] textoDecifrado = cipher.doFinal(textoCifrado);
+        return new String(textoDecifrado, "UTF-8");
+    }
+
+    // =================================================================
+    // 3. FUNÇÃO HASH (SHA-256)
+    // =================================================================
+
+    /**
+     * Gera o valor Hash SHA-256 de um texto.
+     */
+    public static String gerarHashSHA256(String texto) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashBytes = digest.digest(texto.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        
+        // Converte o array de bytes para uma representação hexadecimal
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hashBytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    // =================================================================
+    // EXECUÇÃO E VERIFICAÇÃO (MAIN)
+    // =================================================================
+
+    public static void main(String[] args) {
+        String mensagemOriginal = "Esta é a mensagem secreta para a aula de criptografia.";
+        System.out.println("--- Dados de Entrada ---");
+        System.out.println("Mensagem Original: " + mensagemOriginal + "\n");
+
+        try {
+            // --- DEMONSTRAÇÃO AES ---
+            System.out.println("### 1. Criptografia Simétrica (AES) ###");
+            SecretKey chaveAES = gerarChaveAES();
+            System.out.println("Chave AES (Secreta): " + Base64.getEncoder().encodeToString(chaveAES.getEncoded()));
+
+            byte[] cifradoAES = cifrarAES(mensagemOriginal, chaveAES);
+            String cifradoAESBase64 = Base64.getEncoder().encodeToString(cifradoAES);
+            System.out.println("Texto Cifrado (AES): " + cifradoAESBase64);
+
+            String decifradoAES = decifrarAES(cifradoAES, chaveAES);
+            System.out.println("Texto Decifrado (AES): " + decifradoAES);
+            
+            // VERIFICAÇÃO:
+            System.out.println("VERIFICAÇÃO: " + decifradoAES.equals(mensagemOriginal));
+            System.out.println("----------------------------------------\n");
+
+
+            // --- DEMONSTRAÇÃO RSA ---
+            System.out.println("### 2. Criptografia Assimétrica (RSA) ###");
+            KeyPair parChaves = gerarParDeChavesRSA();
+            PublicKey chavePublica = parChaves.getPublic();
+            PrivateKey chavePrivada = parChaves.getPrivate();
+            System.out.println("Chave Pública: " + Base64.getEncoder().encodeToString(chavePublica.getEncoded()));
+            System.out.println("Chave Privada: " + Base64.getEncoder().encodeToString(chavePrivada.getEncoded()));
+            
+            // Cifra com a chave pública
+            byte[] cifradoRSA = cifrarRSA(mensagemOriginal, chavePublica);
+            String cifradoRSABase64 = Base64.getEncoder().encodeToString(cifradoRSA);
+            System.out.println("Texto Cifrado (RSA): " + cifradoRSABase64.substring(0, 50) + "..."); // Exibe parcial
+            
+            // Decifra com a chave privada
+            String decifradoRSA = decifrarRSA(cifradoRSA, chavePrivada);
+            System.out.println("Texto Decifrado (RSA): " + decifradoRSA);
+
+            // VERIFICAÇÃO:
+            System.out.println("VERIFICAÇÃO: " + decifradoRSA.equals(mensagemOriginal));
+            System.out.println("----------------------------------------\n");
+
+            
+            // --- DEMONSTRAÇÃO HASH (SHA-256) ---
+            System.out.println("### 3. Função Hash (SHA-256) ###");
+            String hash1 = gerarHashSHA256(mensagemOriginal);
+            System.out.println("Hash Original: " + hash1);
+
+            // Pequena alteração na mensagem
+            String mensagemAlterada = "Esta é a mensagem secreta para a aula de criptografia."; // Note o ponto final.
+            String hash2 = gerarHashSHA256(mensagemAlterada + " "); // Adiciona um espaço
+            System.out.println("Hash Alterado: " + hash2);
+            
+            // VERIFICAÇÃO (Efeito Avalanche):
+            // O Hash de entrada quase idêntica (um espaço) é totalmente diferente.
+            System.out.println("VERIFICAÇÃO (Mesmo Hash?): " + hash1.equals(hash2));
+            System.out.println("----------------------------------------\n");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
